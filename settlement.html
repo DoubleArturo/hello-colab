@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>結算工具</title>
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --card: #ffffff;
+      --accent-green: #4a7c59;
+      --accent-gold: #b8922a;
+      --accent-dark: #2c2c2c;
+      --text: #333333;
+      --muted: #777777;
+      --border: #e0d8cc;
+      --red: #c0392b;
+      --tag-bg: #eef4f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 430px;
+      margin: 0 auto;
+      padding-bottom: 32px;
+    }
+
+    /* Header */
+    .header {
+      background: var(--accent-dark);
+      color: #fff;
+      padding: 20px 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+    .header p { font-size: 12px; color: #aaa; margin-top: 3px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--accent-dark);
+      padding: 0 20px 12px;
+      gap: 8px;
+    }
+    .tab {
+      flex: 1;
+      padding: 8px 4px;
+      border-radius: 8px;
+      border: 1.5px solid transparent;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      background: #3a3a3a;
+      color: #aaa;
+    }
+    .tab.active-buyer {
+      background: var(--tag-bg);
+      color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+    .tab.active-supplier {
+      background: #fff8ee;
+      color: var(--accent-gold);
+      border-color: var(--accent-gold);
+    }
+
+    /* Input panel */
+    .panel { padding: 16px 16px 0; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+
+    .product-row {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+    .product-row-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .product-name { font-size: 14px; font-weight: 600; }
+    .product-prices {
+      display: flex;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .price-tag {
+      background: var(--tag-bg);
+      color: var(--accent-green);
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .price-tag.supplier {
+      background: #fff8ee;
+      color: var(--accent-gold);
+    }
+
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .qty-btn {
+      width: 40px;
+      height: 36px;
+      background: #f7f4ef;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .qty-btn:active { background: #e8e4de; }
+    .qty-input {
+      flex: 1;
+      border: none;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      background: white;
+      height: 36px;
+      outline: none;
+      min-width: 0;
+    }
+    .qty-input::-webkit-inner-spin-button,
+    .qty-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* Shipping info row */
+    .shipping-info {
+      margin: 4px 0 0;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+    }
+    .shipping-tiers { display: flex; gap: 6px; margin-top: 8px; }
+    .shipping-tier {
+      flex: 1;
+      text-align: center;
+      padding: 7px 4px;
+      border-radius: 8px;
+      font-size: 11px;
+      background: #f7f4ef;
+      border: 1.5px solid transparent;
+    }
+    .shipping-tier.active {
+      background: #eef4f0;
+      border-color: var(--accent-green);
+    }
+    .shipping-tier .tier-label { color: var(--muted); margin-bottom: 2px; }
+    .shipping-tier .tier-amount { font-weight: 700; font-size: 13px; color: var(--accent-green); }
+    .shipping-tier.active .tier-amount { color: var(--accent-green); }
+
+    /* Settlement receipt */
+    .receipt-container { padding: 16px; }
+
+    .receipt {
+      background: var(--card);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .receipt-header {
+      padding: 16px 18px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .receipt-header.buyer { background: var(--accent-green); }
+    .receipt-header.supplier { background: var(--accent-gold); }
+    .receipt-header-title { color: white; }
+    .receipt-header-title h2 { font-size: 16px; font-weight: 700; }
+    .receipt-header-title p { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+    .receipt-badge {
+      background: rgba(255,255,255,0.25);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .receipt-body { padding: 14px 18px; }
+
+    .receipt-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid #f5f0e8;
+      font-size: 13px;
+    }
+    .receipt-line:last-child { border-bottom: none; }
+    .receipt-line .item-name { color: var(--text); flex: 1; }
+    .receipt-line .item-detail { color: var(--muted); font-size: 11px; margin-right: 10px; }
+    .receipt-line .item-amount { font-weight: 600; font-size: 14px; }
+
+    .receipt-line.zero { opacity: 0.4; }
+
+    .receipt-divider {
+      border: none;
+      border-top: 1.5px dashed var(--border);
+      margin: 4px 0;
+    }
+
+    .receipt-line.subtotal .item-name { color: var(--muted); font-size: 12px; }
+    .receipt-line.subtotal .item-amount { color: var(--muted); font-size: 12px; }
+
+    .receipt-line.shipping .item-name { color: var(--text); }
+    .receipt-line.shipping .item-amount { color: var(--accent-green); }
+
+    .receipt-total {
+      margin: 0 18px;
+      padding: 14px 0 16px;
+      border-top: 2px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .receipt-total .total-label { font-size: 15px; font-weight: 700; }
+    .receipt-total .total-amount {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent-green);
+    }
+    .receipt-total .total-amount.supplier-total { color: var(--accent-gold); }
+
+    .receipt-note {
+      background: #f9f6f1;
+      padding: 12px 18px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Profit summary */
+    .profit-card {
+      background: var(--accent-dark);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 0 16px 16px;
+    }
+    .profit-card .profit-title { color: #aaa; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .profit-card .profit-value { color: white; font-size: 22px; font-weight: 800; }
+    .profit-card .profit-sub { color: #888; font-size: 11px; margin-top: 4px; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* Quantity total badge */
+    .qty-total-bar {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .qty-total-bar span { color: var(--muted); }
+    .qty-total-bar strong { font-size: 15px; }
+
+    /* Divider between input and receipt */
+    .section-divider { height: 1px; background: var(--border); margin: 8px 16px; }
+
+    /* Shimmer for active shipping tier */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .shipping-tier.active { animation: pulse 2s infinite; }
+
+    .private-banner {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: 0 16px 8px;
+      font-size: 11px;
+      color: #856404;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .view-section { display: none; }
+    .view-section.visible { display: block; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>月結算工具</h1>
+    <p>乙方（經銷商）專用</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active-buyer" id="tab-buyer" onclick="switchTab('buyer')">
+      甲方結算
+    </button>
+    <button class="tab" id="tab-supplier" onclick="switchTab('supplier')">
+      供應商結算
+    </button>
+  </div>
+
+  <!-- INPUT SECTION (always visible) -->
+  <div class="panel">
+    <div class="section-label">本月出貨數量</div>
+
+    <!-- 入門結緣款 -->
+    <div class="product-row">
+      <div class="product-row-top">
+        <span class="product-name">入門結緣款</span>
+        <div class="product-prices">
+          <span class="price-tag" title="售給甲方（未稅）">甲 $110</span>
+          <span class="price-tag supplier" title="進貨成本（未稅）">進 $80</span>
+        </div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="changeQty('q1', -1)">−</button>
+        <input class="qty-input" type="number" id="q1" value="0" min="0" oninput="update()" />
+        <button class="qty-btn" onclick="changeQty('q1', 1)">+</button>
+      </div>
+    </div>
+
+    <!-- 進階主力款 -->
+    <div class="product-row">
+      <div class="product-row-top">
+        <span class="product-name">進階主力款</span>
+        <div class="product-prices">
+          <span class="price-tag">甲 $190</span>
+          <span class="price-tag supplier">進 $120</span>
+        </div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="changeQty('q2', -1)">−</button>
+        <input class="qty-input" type="number" id="q2" value="0" min="0" oninput="update()" />
+        <button class="qty-btn" onclick="changeQty('q2', 1)">+</button>
+      </div>
+    </div>
+
+    <!-- 核心主力款 -->
+    <div class="product-row">
+      <div class="product-row-top">
+        <span class="product-name">核心主力款</span>
+        <div class="product-prices">
+          <span class="price-tag">甲 $270</span>
+          <span class="price-tag supplier">進 $180</span>
+        </div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="changeQty('q3', -1)">−</button>
+        <input class="qty-input" type="number" id="q3" value="0" min="0" oninput="update()" />
+        <button class="qty-btn" onclick="changeQty('q3', 1)">+</button>
+      </div>
+    </div>
+
+    <!-- VIP尊榮款 -->
+    <div class="product-row">
+      <div class="product-row-top">
+        <span class="product-name">VIP 尊榮款</span>
+        <div class="product-prices">
+          <span class="price-tag">甲 $600</span>
+          <span class="price-tag supplier">進 $450</span>
+        </div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="changeQty('q4', -1)">−</button>
+        <input class="qty-input" type="number" id="q4" value="0" min="0" oninput="update()" />
+        <button class="qty-btn" onclick="changeQty('q4', 1)">+</button>
+      </div>
+    </div>
+
+    <!-- Total qty bar -->
+    <div class="qty-total-bar">
+      <span>本次總件數</span>
+      <strong id="total-qty-display">0 件</strong>
+    </div>
+
+    <!-- Shipping tier display -->
+    <div class="shipping-info">
+      <div class="section-label" style="margin-bottom:6px">運費分擔機制</div>
+      <div class="shipping-tiers">
+        <div class="shipping-tier" id="tier-low">
+          <div class="tier-label">未滿 20 件</div>
+          <div class="tier-amount">乙方 $120</div>
+        </div>
+        <div class="shipping-tier" id="tier-mid">
+          <div class="tier-label">20–39 件</div>
+          <div class="tier-amount">各付 $60</div>
+        </div>
+        <div class="shipping-tier" id="tier-high">
+          <div class="tier-label">40 件以上</div>
+          <div class="tier-amount">甲方全付</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUYER SETTLEMENT VIEW -->
+  <div class="view-section visible" id="view-buyer">
+    <div class="section-divider"></div>
+    <div class="receipt-container">
+      <div id="buyer-empty" class="empty-state" style="display:none">
+        <div class="icon">📋</div>
+        <p>請輸入出貨數量</p>
+      </div>
+
+      <div class="receipt" id="buyer-receipt">
+        <div class="receipt-header buyer">
+          <div class="receipt-header-title">
+            <h2>甲方結算明細</h2>
+            <p>終端通路 · 未稅金額</p>
+          </div>
+          <span class="receipt-badge" id="buyer-month"></span>
+        </div>
+
+        <div class="receipt-body" id="buyer-lines">
+          <!-- dynamic -->
+        </div>
+
+        <hr class="receipt-divider" style="margin:0 18px" />
+
+        <div class="receipt-total">
+          <span class="total-label">應收合計</span>
+          <span class="total-amount" id="buyer-total">$0</span>
+        </div>
+
+        <div class="receipt-note" id="buyer-note"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLIER SETTLEMENT VIEW -->
+  <div class="view-section" id="view-supplier">
+    <div class="section-divider"></div>
+    <div class="private-banner">
+      🔒 此頁為乙方內部資料，請勿對外分享
+    </div>
+    <div class="receipt-container">
+      <div id="supplier-empty" class="empty-state" style="display:none">
+        <div class="icon">📦</div>
+        <p>請輸入進貨數量</p>
+      </div>
+
+      <div class="receipt" id="supplier-receipt">
+        <div class="receipt-header supplier">
+          <div class="receipt-header-title">
+            <h2>供應商結算明細</h2>
+            <p>進貨成本 · 未稅金額</p>
+          </div>
+          <span class="receipt-badge" id="supplier-month"></span>
+        </div>
+
+        <div class="receipt-body" id="supplier-lines">
+          <!-- dynamic -->
+        </div>
+
+        <hr class="receipt-divider" style="margin:0 18px" />
+
+        <div class="receipt-total">
+          <span class="total-label">應付合計</span>
+          <span class="total-amount supplier-total" id="supplier-total">$0</span>
+        </div>
+
+        <div class="receipt-note">
+          以上為乙方應付供應商金額（未稅）。<br/>
+          此明細請勿向甲方揭露。
+        </div>
+      </div>
+    </div>
+
+    <!-- Profit summary (only in supplier tab, so user can quickly verify) -->
+    <div class="profit-card" id="profit-card">
+      <div class="profit-title">本月毛利估算（內部）</div>
+      <div class="profit-value" id="profit-value">$0</div>
+      <div class="profit-sub" id="profit-sub">甲方收入 − 進貨成本 − 運費分攤</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const PRODUCTS = [
+    { id: 'q1', name: '入門結緣款', buyerPrice: 110, supplierPrice: 80 },
+    { id: 'q2', name: '進階主力款', buyerPrice: 190, supplierPrice: 120 },
+    { id: 'q3', name: '核心主力款', buyerPrice: 270, supplierPrice: 180 },
+    { id: 'q4', name: 'VIP 尊榮款', buyerPrice: 600, supplierPrice: 450 },
+  ];
+
+  const SHIPPING_TOTAL = 120;
+
+  function getShipping(qty) {
+    if (qty >= 40) return { buyerPays: SHIPPING_TOTAL, dealerPays: 0 };
+    if (qty >= 20) return { buyerPays: 60, dealerPays: 60 };
+    return { buyerPays: 0, dealerPays: SHIPPING_TOTAL };
+  }
+
+  function fmt(n) {
+    return '$' + n.toLocaleString('zh-TW');
+  }
+
+  function getMonthLabel() {
+    const d = new Date();
+    return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function changeQty(id, delta) {
+    const el = document.getElementById(id);
+    const val = Math.max(0, (parseInt(el.value) || 0) + delta);
+    el.value = val;
+    update();
+  }
+
+  function currentTab() {
+    return document.getElementById('tab-buyer').classList.contains('active-buyer') ? 'buyer' : 'supplier';
+  }
+
+  function switchTab(tab) {
+    const buyerTab = document.getElementById('tab-buyer');
+    const supplierTab = document.getElementById('tab-supplier');
+    const buyerView = document.getElementById('view-buyer');
+    const supplierView = document.getElementById('view-supplier');
+
+    if (tab === 'buyer') {
+      buyerTab.className = 'tab active-buyer';
+      supplierTab.className = 'tab';
+      buyerView.classList.add('visible');
+      supplierView.classList.remove('visible');
+    } else {
+      buyerTab.className = 'tab';
+      supplierTab.className = 'tab active-supplier';
+      buyerView.classList.remove('visible');
+      supplierView.classList.add('visible');
+    }
+  }
+
+  function update() {
+    const qtys = PRODUCTS.map(p => Math.max(0, parseInt(document.getElementById(p.id).value) || 0));
+    const totalQty = qtys.reduce((a, b) => a + b, 0);
+
+    document.getElementById('total-qty-display').textContent = totalQty + ' 件';
+
+    // Shipping tier highlight
+    document.getElementById('tier-low').classList.toggle('active', totalQty > 0 && totalQty < 20);
+    document.getElementById('tier-mid').classList.toggle('active', totalQty >= 20 && totalQty < 40);
+    document.getElementById('tier-high').classList.toggle('active', totalQty >= 40);
+
+    const shipping = getShipping(totalQty);
+    const month = getMonthLabel();
+    document.getElementById('buyer-month').textContent = month;
+    document.getElementById('supplier-month').textContent = month;
+
+    // --- BUYER RECEIPT ---
+    let buyerSubtotal = 0;
+    let buyerHtml = '';
+    PRODUCTS.forEach((p, i) => {
+      const qty = qtys[i];
+      const amt = qty * p.buyerPrice;
+      buyerSubtotal += amt;
+      if (qty === 0) return;
+      buyerHtml += `
+        <div class="receipt-line">
+          <span class="item-name">${p.name}</span>
+          <span class="item-detail">${qty} × ${fmt(p.buyerPrice)}</span>
+          <span class="item-amount">${fmt(amt)}</span>
+        </div>`;
+    });
+
+    if (totalQty === 0) {
+      buyerHtml = '<div style="padding:16px 0;text-align:center;color:#aaa;font-size:13px">尚未輸入數量</div>';
+    }
+
+    // Subtotal line
+    buyerHtml += `<div class="receipt-line subtotal">
+      <span class="item-name">小計（商品）</span>
+      <span class="item-amount">${fmt(buyerSubtotal)}</span>
+    </div>`;
+
+    // Shipping line
+    const shippingLabel = totalQty >= 40
+      ? '運費（甲方全付）'
+      : totalQty >= 20
+        ? '運費（雙方各半）'
+        : '運費（乙方全付）';
+    const shippingAmt = shipping.buyerPays;
+
+    buyerHtml += `<hr class="receipt-divider" />`;
+    buyerHtml += `<div class="receipt-line shipping${shippingAmt === 0 ? ' zero' : ''}">
+      <span class="item-name">${shippingLabel}</span>
+      <span class="item-amount">${shippingAmt === 0 ? '免運' : fmt(shippingAmt)}</span>
+    </div>`;
+
+    document.getElementById('buyer-lines').innerHTML = buyerHtml;
+
+    const buyerTotal = buyerSubtotal + shippingAmt;
+    document.getElementById('buyer-total').textContent = fmt(buyerTotal);
+
+    // Buyer note
+    let noteText = '';
+    if (totalQty > 0) {
+      if (totalQty < 20) noteText = `本次訂購 ${totalQty} 件，未達 20 件，運費由乙方全額負擔（NT$120）。`;
+      else if (totalQty < 40) noteText = `本次訂購 ${totalQty} 件，運費雙方各付 NT$60。`;
+      else noteText = `本次訂購 ${totalQty} 件（40 件以上），運費由甲方全額負擔，免運。`;
+    }
+    document.getElementById('buyer-note').textContent = noteText;
+
+    // --- SUPPLIER RECEIPT ---
+    let supplierSubtotal = 0;
+    let supplierHtml = '';
+    PRODUCTS.forEach((p, i) => {
+      const qty = qtys[i];
+      const amt = qty * p.supplierPrice;
+      supplierSubtotal += amt;
+      if (qty === 0) return;
+      supplierHtml += `
+        <div class="receipt-line">
+          <span class="item-name">${p.name}</span>
+          <span class="item-detail">${qty} × ${fmt(p.supplierPrice)}</span>
+          <span class="item-amount">${fmt(amt)}</span>
+        </div>`;
+    });
+
+    if (totalQty === 0) {
+      supplierHtml = '<div style="padding:16px 0;text-align:center;color:#aaa;font-size:13px">尚未輸入數量</div>';
+    }
+
+    document.getElementById('supplier-lines').innerHTML = supplierHtml;
+    document.getElementById('supplier-total').textContent = fmt(supplierSubtotal);
+
+    // Profit calc
+    const grossProfit = buyerSubtotal - supplierSubtotal - shipping.dealerPays;
+    document.getElementById('profit-value').textContent = fmt(grossProfit);
+    document.getElementById('profit-sub').textContent =
+      `甲方收入 ${fmt(buyerSubtotal)} − 進貨成本 ${fmt(supplierSubtotal)} − 乙方運費 ${fmt(shipping.dealerPays)}`;
+  }
+
+  // Init
+  update();
+</script>
+</body>
+</html>
